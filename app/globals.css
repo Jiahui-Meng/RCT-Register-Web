@@ -1,0 +1,148 @@
+:root {
+  --bg: #f4f8f5;
+  --panel: #ffffff;
+  --ink: #132014;
+  --muted: #4b5a4c;
+  --line: #d5dfd6;
+  --accent: #2f7d4a;
+  --accent-soft: #e2f2e7;
+  --danger: #a32727;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: radial-gradient(circle at top, #ecf4ed 0%, var(--bg) 50%, #eef3f1 100%);
+  color: var(--ink);
+  font-family: "Segoe UI", Tahoma, sans-serif;
+}
+
+a {
+  color: inherit;
+}
+
+.container {
+  width: min(980px, 94vw);
+  margin: 36px auto;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.row > * {
+  flex: 1;
+  min-width: 180px;
+}
+
+label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+input,
+select,
+button {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #bcc9be;
+  font-size: 14px;
+}
+
+button {
+  cursor: pointer;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+}
+
+.link-button {
+  display: inline-block;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  text-align: center;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+}
+
+.link-button.secondary {
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid #bcc9be;
+}
+
+button.secondary {
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid #bcc9be;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.list {
+  display: grid;
+  gap: 10px;
+}
+
+.session-item {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.pill {
+  display: inline-block;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: #1f5b35;
+  margin-right: 8px;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 14px;
+}
+
+.success {
+  color: #1e7a36;
+  font-size: 14px;
+}
