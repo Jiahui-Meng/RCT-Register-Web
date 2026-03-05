@@ -55,6 +55,19 @@ export type BookingResult =
     }
   | { status: "duplicate_student" | "all_full" | "closed_or_invalid_session" | "invalid_input" };
 
+export type StudentRegistrationLookup = {
+  id: string;
+  student_id: string;
+  email: string;
+  assigned_priority: number;
+  created_at: string;
+  session: {
+    session_date: string;
+    start_at: string;
+    end_at: string;
+  };
+};
+
 let dbInstance: Database.Database | null = null;
 
 function resolveSqlitePath(): string {
@@ -175,10 +188,25 @@ export function createSessionsBulk(params: {
   const endMinutes = toMinutes(params.endTime);
   const offset = timezoneOffset(env.appTimezone);
 
+  const lunchStart = 12 * 60 + 30;
+  const lunchEnd = 13 * 60 + 30;
+
   const rows: Array<{ id: string; session_date: string; start_at: string; end_at: string }> = [];
+  let skippedForLunch = 0;
+
   for (let current = startMinutes; current + interval <= endMinutes; current += interval) {
-    const start = toTimeValue(current);
-    const end = toTimeValue(current + interval);
+    const slotStart = current;
+    const slotEnd = current + interval;
+
+    // Skip any session that overlaps 12:30-13:30
+    const overlapsLunch = slotStart < lunchEnd && slotEnd > lunchStart;
+    if (overlapsLunch) {
+      skippedForLunch += 1;
+      continue;
+    }
+
+    const start = toTimeValue(slotStart);
+    const end = toTimeValue(slotEnd);
     rows.push({
       id: crypto.randomUUID(),
       session_date: params.date,
@@ -203,7 +231,11 @@ export function createSessionsBulk(params: {
   });
 
   const insertedCount = tx();
-  return { generatedCount: rows.length, createdCount: insertedCount };
+  return {
+    generatedCount: rows.length + skippedForLunch,
+    createdCount: insertedCount,
+    skippedForLunch
+  };
 }
 
 export function setSessionOpenState(id: string, isOpen: boolean) {
@@ -421,6 +453,57 @@ export function getRegistrationsByDateRange(dateFrom: string, dateTo: string): E
     .all(dateFrom, dateTo) as ExportRegistrationRow[];
 }
 
+export function getRegistrationByStudent(studentId: string, email: string): StudentRegistrationLookup | null {
+  const db = getDb();
+  const row = db
+    .prepare(
+      `
+      select
+        r.id,
+        r.student_id,
+        r.email,
+        r.assigned_priority,
+        r.created_at,
+        s.session_date as session_date,
+        s.start_at as session_start_at,
+        s.end_at as session_end_at
+      from registrations r
+      join sessions s on s.id = r.assigned_session_id
+      where r.student_id = ? and lower(r.email) = lower(?)
+      limit 1
+    `
+    )
+    .get(studentId, email) as
+    | {
+        id: string;
+        student_id: string;
+        email: string;
+        assigned_priority: number;
+        created_at: string;
+        session_date: string;
+        session_start_at: string;
+        session_end_at: string;
+      }
+    | undefined;
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    student_id: row.student_id,
+    email: row.email,
+    assigned_priority: row.assigned_priority,
+    created_at: row.created_at,
+    session: {
+      session_date: row.session_date,
+      start_at: row.session_start_at,
+      end_at: row.session_end_at
+    }
+  };
+}
+
 export function clearAllBookings() {
   const db = getDb();
   const tx = db.transaction(() => {
@@ -431,4 +514,51 @@ export function clearAllBookings() {
 
   const deletedCount = tx();
   return { deletedCount };
+}
+
+export function getBookableSessionsByDate(date: string): SessionRow[] {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `
+      select id, session_date, start_at, end_at, capacity, booked_count, is_open, created_at
+      from sessions
+      where session_date = ?
+        and is_open = 1
+        and booked_count < capacity
+      order by start_at asc
+    `
+    )
+    .all(date) as SessionRowRaw[];
+  return rows.map(toSessionRow);
+}
+
+export function getBookableDates(dateFrom: string, dateTo: string): string[] {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `
+      select distinct session_date
+      from sessions
+      where session_date >= ? and session_date <= ?
+        and is_open = 1
+        and booked_count < capacity
+      order by session_date asc
+    `
+    )
+    .all(dateFrom, dateTo) as Array<{ session_date: string }>;
+
+  return rows.map((row) => row.session_date);
+}
+
+
+export function clearAllSessions() {
+  const db = getDb();
+  const tx = db.transaction(() => {
+    const deletedBookings = db.prepare(`delete from registrations`).run().changes;
+    const deletedSessions = db.prepare(`delete from sessions`).run().changes;
+    return { deletedBookings, deletedSessions };
+  });
+
+  return tx();
 }

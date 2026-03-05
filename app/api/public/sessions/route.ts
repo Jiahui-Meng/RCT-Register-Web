@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getSessionsByDate } from "@/lib/db";
+import { getBookableSessionsByDate } from "@/lib/db";
 import { env } from "@/lib/env";
 import { jsonError, jsonOk } from "@/lib/http";
 import {
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const sessions = getSessionsByDate(date).map((session) => ({
+  const sessions = getBookableSessionsByDate(date).map((session) => ({
     id: session.id,
     session_date: session.session_date,
     start_time: toTimeInTimezone(session.start_at),

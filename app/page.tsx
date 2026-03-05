@@ -13,6 +13,9 @@ export default function HomePage() {
           <Link href="/register" className="link-button">
             Student Registration
           </Link>
+          <Link href="/lookup" className="link-button">
+            Check My Booking
+          </Link>
         </div>
       </div>
     </main>

@@ -146,3 +146,65 @@ button:disabled {
   color: #1e7a36;
   font-size: 14px;
 }
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.calendar-header strong {
+  font-size: 15px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.calendar-weekdays {
+  margin-bottom: 6px;
+}
+
+.calendar-weekday {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.calendar-cell {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0;
+}
+
+.calendar-cell.empty {
+  border: none;
+  background: transparent;
+  cursor: default;
+}
+
+.calendar-cell.disabled {
+  background: #f1f3f2;
+  color: #9aa6a0;
+  border-color: #dbe2dd;
+  cursor: not-allowed;
+}
+
+.calendar-cell.selected {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}

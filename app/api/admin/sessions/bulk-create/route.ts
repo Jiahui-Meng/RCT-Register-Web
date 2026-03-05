@@ -62,21 +62,32 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const generatedCount = Math.floor((endMinutes - startMinutes) / 20);
-
-  if (generatedCount <= 0) {
+  const requestedCount = Math.floor((endMinutes - startMinutes) / 20);
+  if (requestedCount <= 0) {
     return jsonError(400, {
       status: "invalid_input",
       message: "No sessions generated for the given time range."
     });
   }
 
-  const { createdCount } = createSessionsBulk({
+  const { createdCount, generatedCount, skippedForLunch } = createSessionsBulk({
     date,
     startTime,
     endTime,
     intervalMinutes: 20
   });
 
-  return jsonOk({ status: "ok", created_count: createdCount });
+  if (generatedCount > 0 && skippedForLunch === generatedCount) {
+    return jsonError(400, {
+      status: "invalid_input",
+      message: "No sessions created. 12:30-13:30 is blocked for lunch break."
+    });
+  }
+
+  return jsonOk({
+    status: "ok",
+    created_count: createdCount,
+    generated_count: generatedCount,
+    skipped_lunch_count: skippedForLunch
+  });
 }

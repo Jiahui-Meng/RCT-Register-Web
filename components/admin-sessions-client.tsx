@@ -31,6 +31,14 @@ function displayTime(iso: string) {
   });
 }
 
+function formatDisplayDate(dateString: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return dateString;
+  }
+  const [year, month, day] = dateString.split("-");
+  return `${month}-${day}-${year}`;
+}
+
 export default function AdminSessionsClient() {
   const [date, setDate] = useState(todayLocalString());
   const [sessions, setSessions] = useState<SessionItem[]>([]);
@@ -41,7 +49,8 @@ export default function AdminSessionsClient() {
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("17:00");
   const [creating, setCreating] = useState(false);
-  const [clearing, setClearing] = useState(false);
+  const [clearingBookings, setClearingBookings] = useState(false);
+  const [clearingSessions, setClearingSessions] = useState(false);
 
   const minDate = useMemo(() => todayLocalString(), []);
   const maxDate = useMemo(() => plusDays(todayLocalString(), 30), []);
@@ -86,13 +95,20 @@ export default function AdminSessionsClient() {
       const body = (await response.json()) as {
         status: string;
         created_count?: number;
+        skipped_lunch_count?: number;
         message?: string;
       };
       if (!response.ok) {
         setError(body.message ?? "Failed to create sessions.");
         return;
       }
-      setMessage(`Generated ${body.created_count ?? 0} sessions.`);
+      const created = body.created_count ?? 0;
+      const skippedLunch = body.skipped_lunch_count ?? 0;
+      setMessage(
+        skippedLunch > 0
+          ? `Created ${created} sessions. Skipped ${skippedLunch} during 12:30-13:30.`
+          : `Created ${created} sessions.`
+      );
       await loadSessions(date);
     } catch {
       setError("Failed to create sessions.");
@@ -133,7 +149,7 @@ export default function AdminSessionsClient() {
       return;
     }
 
-    setClearing(true);
+    setClearingBookings(true);
     setError("");
     setMessage("");
     try {
@@ -148,7 +164,40 @@ export default function AdminSessionsClient() {
     } catch {
       setError("Failed to clear bookings.");
     } finally {
-      setClearing(false);
+      setClearingBookings(false);
+    }
+  }
+
+  async function clearAllSessions() {
+    const confirmed = window.confirm(
+      "This will delete ALL generated sessions and ALL bookings. This action cannot be undone. Continue?"
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setClearingSessions(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/admin/sessions/clear-all", { method: "POST" });
+      const body = (await response.json()) as {
+        deleted_sessions_count?: number;
+        deleted_bookings_count?: number;
+        message?: string;
+      };
+      if (!response.ok) {
+        setError(body.message ?? "Failed to clear sessions.");
+        return;
+      }
+      setMessage(
+        `Deleted ${body.deleted_sessions_count ?? 0} session(s) and ${body.deleted_bookings_count ?? 0} booking(s).`
+      );
+      await loadSessions(date);
+    } catch {
+      setError("Failed to clear sessions.");
+    } finally {
+      setClearingSessions(false);
     }
   }
 
@@ -170,14 +219,26 @@ export default function AdminSessionsClient() {
             View Registrations
           </a>
           <button onClick={downloadCsv}>Export CSV</button>
-          <button className="secondary" onClick={clearAllBookings} disabled={clearing}>
-            {clearing ? "Clearing..." : "Clear All Bookings"}
+          <button
+            className="secondary"
+            onClick={clearAllBookings}
+            disabled={clearingBookings || clearingSessions}
+          >
+            {clearingBookings ? "Clearing..." : "Clear All Bookings"}
+          </button>
+          <button
+            className="secondary"
+            onClick={clearAllSessions}
+            disabled={clearingSessions || clearingBookings}
+          >
+            {clearingSessions ? "Deleting..." : "Delete All Sessions"}
           </button>
         </div>
       </div>
 
       <div className="card">
         <label htmlFor="date">Date</label>
+        <p className="muted">Selected: {formatDisplayDate(date)}</p>
         <input
           id="date"
           type="date"
@@ -210,7 +271,7 @@ export default function AdminSessionsClient() {
             />
           </div>
         </div>
-        <button onClick={createSessions} disabled={creating}>
+        <button onClick={createSessions} disabled={creating || clearingSessions}>
           {creating ? "Creating..." : "Generate Sessions"}
         </button>
         {message ? <p className="success">{message}</p> : null}
@@ -246,3 +307,7 @@ export default function AdminSessionsClient() {
     </main>
   );
 }
+
+
+
+

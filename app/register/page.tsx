@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 type SessionItem = {
@@ -24,6 +25,9 @@ type RegisterResponse =
       status: "duplicate_student" | "all_full" | "closed_or_invalid_session" | "invalid_input";
     };
 
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 function todayLocalString() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -34,8 +38,40 @@ function plusDays(dateString: string, days: number) {
   return date.toISOString().slice(0, 10);
 }
 
+function parseYmd(dateString: string): Date {
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function toYmd(date: Date): string {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function formatDisplayDate(dateString: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return dateString;
+  }
+  const [year, month, day] = dateString.split("-");
+  return `${month}-${day}-${year}`;
+}
+
+function monthKey(date: Date) {
+  return date.getUTCFullYear() * 12 + date.getUTCMonth();
+}
+
 export default function RegisterPage() {
-  const [selectedDate, setSelectedDate] = useState(todayLocalString());
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [loadingDates, setLoadingDates] = useState(false);
+
+  const [selectedDate, setSelectedDate] = useState("");
+  const [visibleMonth, setVisibleMonth] = useState(() => {
+    const today = parseYmd(todayLocalString());
+    return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+  });
+
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [sessionError, setSessionError] = useState("");
@@ -51,10 +87,52 @@ export default function RegisterPage() {
 
   const minDate = useMemo(() => todayLocalString(), []);
   const maxDate = useMemo(() => plusDays(todayLocalString(), 30), []);
+
+  const availableDateSet = useMemo(() => new Set(availableDates), [availableDates]);
   const selectedIds = new Set(preferences.filter(Boolean).map((session) => session!.id));
 
   useEffect(() => {
+    async function loadAvailableDates() {
+      setLoadingDates(true);
+      setSessionError("");
+      try {
+        const response = await fetch("/api/public/available-dates");
+        const body = (await response.json()) as { dates?: string[]; message?: string };
+        if (!response.ok) {
+          setAvailableDates([]);
+          setSessionError(body.message ?? "Failed to load available dates.");
+          return;
+        }
+
+        const dates = body.dates ?? [];
+        setAvailableDates(dates);
+        const nextSelected = dates[0] ?? "";
+        setSelectedDate((prev) => (prev && dates.includes(prev) ? prev : nextSelected));
+      } catch {
+        setSessionError("Failed to load available dates.");
+      } finally {
+        setLoadingDates(false);
+      }
+    }
+
+    loadAvailableDates();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedDate) {
+      return;
+    }
+    const selected = parseYmd(selectedDate);
+    setVisibleMonth(new Date(Date.UTC(selected.getUTCFullYear(), selected.getUTCMonth(), 1)));
+  }, [selectedDate]);
+
+  useEffect(() => {
     async function loadSessions() {
+      if (!selectedDate) {
+        setSessions([]);
+        return;
+      }
+
       setLoadingSessions(true);
       setSessionError("");
       try {
@@ -156,6 +234,34 @@ export default function RegisterPage() {
     }
   }
 
+  const monthYearLabel = new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC"
+  }).format(visibleMonth);
+
+  const minMonth = new Date(Date.UTC(parseYmd(minDate).getUTCFullYear(), parseYmd(minDate).getUTCMonth(), 1));
+  const maxMonth = new Date(Date.UTC(parseYmd(maxDate).getUTCFullYear(), parseYmd(maxDate).getUTCMonth(), 1));
+  const canPrevMonth = monthKey(visibleMonth) > monthKey(minMonth);
+  const canNextMonth = monthKey(visibleMonth) < monthKey(maxMonth);
+
+  const firstDayWeekIndex = new Date(
+    Date.UTC(visibleMonth.getUTCFullYear(), visibleMonth.getUTCMonth(), 1)
+  ).getUTCDay();
+  const daysInMonth = new Date(
+    Date.UTC(visibleMonth.getUTCFullYear(), visibleMonth.getUTCMonth() + 1, 0)
+  ).getUTCDate();
+
+  const cells: Array<{ ymd: string; day: number; selectable: boolean; selected: boolean } | null> = [];
+  for (let i = 0; i < firstDayWeekIndex; i += 1) {
+    cells.push(null);
+  }
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const ymd = toYmd(new Date(Date.UTC(visibleMonth.getUTCFullYear(), visibleMonth.getUTCMonth(), day)));
+    const selectable = availableDateSet.has(ymd);
+    cells.push({ ymd, day, selectable, selected: ymd === selectedDate });
+  }
+
   return (
     <main className="container">
       <div className="card">
@@ -164,61 +270,110 @@ export default function RegisterPage() {
           Select 3 unique session preferences (P1, P2, P3). The system auto-assigns the first
           available one.
         </p>
+        <div className="row">
+          <Link href="/lookup" className="link-button">
+            Check My Booking
+          </Link>
+        </div>
       </div>
 
       <div className="card">
-        <label htmlFor="session-date">Browse sessions by date</label>
-        <input
-          id="session-date"
-          type="date"
-          min={minDate}
-          max={maxDate}
-          value={selectedDate}
-          onChange={(event) => setSelectedDate(event.target.value)}
-        />
+        <label>Available booking dates</label>
+        <div className="calendar-header">
+          <button
+            type="button"
+            className="secondary"
+            onClick={() =>
+              setVisibleMonth(
+                new Date(Date.UTC(visibleMonth.getUTCFullYear(), visibleMonth.getUTCMonth() - 1, 1))
+              )
+            }
+            disabled={!canPrevMonth}
+          >
+            Prev
+          </button>
+          <strong>{monthYearLabel}</strong>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() =>
+              setVisibleMonth(
+                new Date(Date.UTC(visibleMonth.getUTCFullYear(), visibleMonth.getUTCMonth() + 1, 1))
+              )
+            }
+            disabled={!canNextMonth}
+          >
+            Next
+          </button>
+        </div>
+
+        <div className="calendar-grid calendar-weekdays">
+          {WEEKDAYS.map((label) => (
+            <div key={label} className="calendar-weekday">
+              {label}
+            </div>
+          ))}
+        </div>
+
+        <div className="calendar-grid">
+          {cells.map((cell, idx) => {
+            if (!cell) {
+              return <div key={`empty-${idx}`} className="calendar-cell empty" />;
+            }
+            return (
+              <button
+                key={cell.ymd}
+                type="button"
+                className={`calendar-cell ${cell.selectable ? "" : "disabled"} ${cell.selected ? "selected" : ""}`}
+                disabled={!cell.selectable || loadingDates}
+                onClick={() => setSelectedDate(cell.ymd)}
+                title={cell.selectable ? formatDisplayDate(cell.ymd) : "No sessions"}
+              >
+                {cell.day}
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="muted">Selected: {selectedDate ? formatDisplayDate(selectedDate) : "None"}</p>
+        <p className="muted">
+          Bookable window: {formatDisplayDate(minDate)} to {formatDisplayDate(maxDate)}
+        </p>
         {sessionError ? <p className="error">{sessionError}</p> : null}
       </div>
 
       <div className="card">
-        <h2>Available Sessions ({selectedDate})</h2>
+        <h2>Available Sessions {selectedDate ? `(${formatDisplayDate(selectedDate)})` : ""}</h2>
         {loadingSessions ? <p className="muted">Loading sessions...</p> : null}
         {!loadingSessions && sessions.length === 0 ? (
-          <p className="muted">No sessions configured for this date.</p>
+          <p className="muted">No bookable sessions for this date.</p>
         ) : null}
         <div className="list">
-          {sessions.map((session) => {
-            const disabled = session.is_full || !session.is_open;
-            return (
-              <div key={session.id} className="session-item">
-                <div>
-                  <strong>
-                    {session.start_time} - {session.end_time}
-                  </strong>
-                  <div className="muted">
-                    {session.booked_count}/{session.capacity} booked
-                    {session.is_full ? " (Full)" : ""}
-                    {!session.is_open ? " (Closed)" : ""}
-                  </div>
-                </div>
-                <div className="row" style={{ margin: 0 }}>
-                  {[0, 1, 2].map((priority) => (
-                    <button
-                      key={`${session.id}-${priority}`}
-                      type="button"
-                      className="secondary"
-                      disabled={
-                        disabled ||
-                        (selectedIds.has(session.id) && preferences[priority]?.id !== session.id)
-                      }
-                      onClick={() => assignPreference(priority, session)}
-                    >
-                      Set P{priority + 1}
-                    </button>
-                  ))}
+          {sessions.map((session) => (
+            <div key={session.id} className="session-item">
+              <div>
+                <strong>
+                  {session.start_time} - {session.end_time}
+                </strong>
+                <div className="muted">
+                  {session.booked_count}/{session.capacity} booked
                 </div>
               </div>
-            );
-          })}
+              <div className="row" style={{ margin: 0 }}>
+                {[0, 1, 2].map((priority) => (
+                  <button
+                    key={`${session.id}-${priority}`}
+                    type="button"
+                    className="secondary"
+                    disabled={selectedIds.has(session.id) && preferences[priority]?.id !== session.id}
+                    onClick={() => assignPreference(priority, session)}
+                  >
+                    Set P{priority + 1}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -231,7 +386,7 @@ export default function RegisterPage() {
                 <span className="pill">Priority {index + 1}</span>
                 {session ? (
                   <span>
-                    {session.session_date} {session.start_time} - {session.end_time}
+                    {formatDisplayDate(session.session_date)} {session.start_time} - {session.end_time}
                   </span>
                 ) : (
                   <span className="muted">Not selected</span>
@@ -300,7 +455,7 @@ export default function RegisterPage() {
           </p>
         ) : null}
 
-        <button type="submit" disabled={submitting}>
+        <button type="submit" disabled={submitting || availableDates.length === 0}>
           {submitting ? "Submitting..." : "Submit Registration"}
         </button>
       </form>

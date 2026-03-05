@@ -27,6 +27,14 @@ function displayTime(iso: string) {
   });
 }
 
+function formatDisplayDate(dateString: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return dateString;
+  }
+  const [year, month, day] = dateString.split("-");
+  return `${month}-${day}-${year}`;
+}
+
 export default function AdminRegistrationsClient() {
   const [date, setDate] = useState(todayLocalString());
   const [rows, setRows] = useState<RegistrationItem[]>([]);
@@ -116,6 +124,7 @@ export default function AdminRegistrationsClient() {
 
       <div className="card">
         <label htmlFor="date">Date</label>
+        <p className="muted">Selected: {formatDisplayDate(date)}</p>
         <input
           id="date"
           type="date"
@@ -142,7 +151,7 @@ export default function AdminRegistrationsClient() {
                 <div className="muted">
                   Priority {row.assigned_priority}
                   {row.session
-                    ? ` | ${row.session.session_date} ${displayTime(row.session.start_at)} - ${displayTime(row.session.end_at)}`
+                    ? ` | ${formatDisplayDate(row.session.session_date)} ${displayTime(row.session.start_at)} - ${displayTime(row.session.end_at)}`
                     : " | Session unavailable"}
                 </div>
               </div>
@@ -153,3 +162,7 @@ export default function AdminRegistrationsClient() {
     </main>
   );
 }
+
+
+
+

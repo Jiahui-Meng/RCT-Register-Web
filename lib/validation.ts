@@ -11,6 +11,11 @@ export type RegisterPayload = {
   preferences: string[];
 };
 
+export type LookupPayload = {
+  student_id: string;
+  email: string;
+};
+
 export function isValidEmail(email: string): boolean {
   return EMAIL_REGEX.test(email);
 }
@@ -67,6 +72,41 @@ export function validateRegisterPayload(payload: unknown): {
       student_id: studentId!.trim(),
       email: email!.trim().toLowerCase(),
       preferences: preferences!
+    }
+  };
+}
+
+export function validateLookupPayload(payload: unknown): {
+  valid: boolean;
+  errors: string[];
+  parsed?: LookupPayload;
+} {
+  const errors: string[] = [];
+
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors: ["Payload must be an object."] };
+  }
+
+  const { student_id: studentId, email } = payload as Partial<LookupPayload>;
+
+  if (!studentId || typeof studentId !== "string" || !isValidStudentId(studentId)) {
+    errors.push("Invalid student_id.");
+  }
+
+  if (!email || typeof email !== "string" || !isValidEmail(email)) {
+    errors.push("Invalid email.");
+  }
+
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
+
+  return {
+    valid: true,
+    errors: [],
+    parsed: {
+      student_id: studentId!.trim(),
+      email: email!.trim().toLowerCase()
     }
   };
 }
