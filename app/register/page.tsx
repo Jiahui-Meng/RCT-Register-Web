@@ -41,7 +41,9 @@ export default function RegisterPage() {
   const [sessionError, setSessionError] = useState("");
 
   const [studentId, setStudentId] = useState("");
+  const [confirmStudentId, setConfirmStudentId] = useState("");
   const [email, setEmail] = useState("");
+  const [confirmEmail, setConfirmEmail] = useState("");
   const [preferences, setPreferences] = useState<(SessionItem | null)[]>([null, null, null]);
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -108,6 +110,14 @@ export default function RegisterPage() {
     }
     if (!studentId.trim() || !email.trim()) {
       setSubmitError("student_id and email are required.");
+      return;
+    }
+    if (studentId.trim() !== confirmStudentId.trim()) {
+      setSubmitError("Student ID does not match confirmation.");
+      return;
+    }
+    if (email.trim().toLowerCase() !== confirmEmail.trim().toLowerCase()) {
+      setSubmitError("Email does not match confirmation.");
       return;
     }
 
@@ -250,6 +260,18 @@ export default function RegisterPage() {
             />
           </div>
           <div>
+            <label htmlFor="student-id-confirm">Confirm Student ID</label>
+            <input
+              id="student-id-confirm"
+              value={confirmStudentId}
+              onChange={(event) => setConfirmStudentId(event.target.value)}
+              placeholder="Re-enter student ID"
+            />
+          </div>
+        </div>
+
+        <div className="row">
+          <div>
             <label htmlFor="email">Email</label>
             <input
               id="email"
@@ -257,6 +279,16 @@ export default function RegisterPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="student@school.edu"
+            />
+          </div>
+          <div>
+            <label htmlFor="email-confirm">Confirm Email</label>
+            <input
+              id="email-confirm"
+              type="email"
+              value={confirmEmail}
+              onChange={(event) => setConfirmEmail(event.target.value)}
+              placeholder="Re-enter email"
             />
           </div>
         </div>

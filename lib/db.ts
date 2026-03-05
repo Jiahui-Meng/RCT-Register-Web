@@ -420,3 +420,15 @@ export function getRegistrationsByDateRange(dateFrom: string, dateTo: string): E
     )
     .all(dateFrom, dateTo) as ExportRegistrationRow[];
 }
+
+export function clearAllBookings() {
+  const db = getDb();
+  const tx = db.transaction(() => {
+    const deleted = db.prepare(`delete from registrations`).run().changes;
+    db.prepare(`update sessions set booked_count = 0`).run();
+    return deleted;
+  });
+
+  const deletedCount = tx();
+  return { deletedCount };
+}

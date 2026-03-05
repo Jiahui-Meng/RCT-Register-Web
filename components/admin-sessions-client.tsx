@@ -41,6 +41,7 @@ export default function AdminSessionsClient() {
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("17:00");
   const [creating, setCreating] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   const minDate = useMemo(() => todayLocalString(), []);
   const maxDate = useMemo(() => plusDays(todayLocalString(), 30), []);
@@ -120,6 +121,37 @@ export default function AdminSessionsClient() {
     }
   }
 
+  function downloadCsv() {
+    window.location.href = `/api/admin/registrations/export?date_from=${date}&date_to=${date}`;
+  }
+
+  async function clearAllBookings() {
+    const confirmed = window.confirm(
+      "This will delete ALL booking records and reset all session counts to 0. Continue?"
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setClearing(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/admin/registrations/clear-all", { method: "POST" });
+      const body = (await response.json()) as { deleted_count?: number; message?: string };
+      if (!response.ok) {
+        setError(body.message ?? "Failed to clear bookings.");
+        return;
+      }
+      setMessage(`Cleared ${body.deleted_count ?? 0} booking(s).`);
+      await loadSessions(date);
+    } catch {
+      setError("Failed to clear bookings.");
+    } finally {
+      setClearing(false);
+    }
+  }
+
   async function logout() {
     await fetch("/api/admin/logout", { method: "POST" });
     window.location.href = "/admin/login";
@@ -137,6 +169,10 @@ export default function AdminSessionsClient() {
           <a href="/admin/registrations" className="link-button">
             View Registrations
           </a>
+          <button onClick={downloadCsv}>Export CSV</button>
+          <button className="secondary" onClick={clearAllBookings} disabled={clearing}>
+            {clearing ? "Clearing..." : "Clear All Bookings"}
+          </button>
         </div>
       </div>
 

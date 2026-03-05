@@ -31,7 +31,9 @@ export default function AdminRegistrationsClient() {
   const [date, setDate] = useState(todayLocalString());
   const [rows, setRows] = useState<RegistrationItem[]>([]);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   const minDate = useMemo(() => todayLocalString(), []);
   const maxDate = useMemo(() => {
@@ -69,6 +71,33 @@ export default function AdminRegistrationsClient() {
     window.location.href = `/api/admin/registrations/export?date_from=${date}&date_to=${date}`;
   }
 
+  async function clearAllBookings() {
+    const confirmed = window.confirm(
+      "This will delete ALL booking records and reset all session counts to 0. Continue?"
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setClearing(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/admin/registrations/clear-all", { method: "POST" });
+      const body = (await response.json()) as { deleted_count?: number; message?: string };
+      if (!response.ok) {
+        setError(body.message ?? "Failed to clear bookings.");
+        return;
+      }
+      setMessage(`Cleared ${body.deleted_count ?? 0} booking(s).`);
+      await loadRegistrations(date);
+    } catch {
+      setError("Failed to clear bookings.");
+    } finally {
+      setClearing(false);
+    }
+  }
+
   return (
     <main className="container">
       <div className="card">
@@ -79,6 +108,9 @@ export default function AdminRegistrationsClient() {
             Back to Sessions
           </a>
           <button onClick={downloadCsv}>Export CSV</button>
+          <button className="secondary" onClick={clearAllBookings} disabled={clearing}>
+            {clearing ? "Clearing..." : "Clear All Bookings"}
+          </button>
         </div>
       </div>
 
@@ -98,6 +130,7 @@ export default function AdminRegistrationsClient() {
         <h2>Assigned Students</h2>
         {loading ? <p className="muted">Loading...</p> : null}
         {error ? <p className="error">{error}</p> : null}
+        {message ? <p className="success">{message}</p> : null}
         {!loading && !error && rows.length === 0 ? (
           <p className="muted">No registrations found.</p>
         ) : null}
