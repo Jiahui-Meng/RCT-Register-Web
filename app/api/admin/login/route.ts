@@ -4,6 +4,14 @@ import { adminCookie, createAdminCookieValue } from "@/lib/admin-auth";
 import { assertRequiredEnv, env } from "@/lib/env";
 import { jsonError } from "@/lib/http";
 
+function shouldUseSecureCookie(request: NextRequest) {
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.toLowerCase();
+  if (forwardedProto) {
+    return forwardedProto === "https";
+  }
+  return request.nextUrl.protocol === "https:";
+}
+
 export async function POST(request: NextRequest) {
   assertRequiredEnv(["ADMIN_PASSWORD_HASH", "ADMIN_SESSION_SECRET"]);
 
@@ -29,7 +37,7 @@ export async function POST(request: NextRequest) {
     name: adminCookie.name,
     value: createAdminCookieValue(),
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookie(request),
     sameSite: "lax",
     path: "/",
     maxAge: adminCookie.maxAgeSeconds

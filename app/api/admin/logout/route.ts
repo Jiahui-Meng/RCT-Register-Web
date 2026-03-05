@@ -1,7 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { adminCookie } from "@/lib/admin-auth";
 
-export async function POST() {
+function shouldUseSecureCookie(request: NextRequest) {
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.toLowerCase();
+  if (forwardedProto) {
+    return forwardedProto === "https";
+  }
+  return request.nextUrl.protocol === "https:";
+}
+
+export async function POST(request: NextRequest) {
   const response = NextResponse.json({ status: "ok" });
   response.cookies.set({
     name: adminCookie.name,
@@ -10,7 +18,7 @@ export async function POST() {
     path: "/",
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production"
+    secure: shouldUseSecureCookie(request)
   });
   return response;
 }
