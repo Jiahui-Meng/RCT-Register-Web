@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 type SessionItem = {
@@ -265,16 +264,12 @@ export default function RegisterPage() {
   return (
     <main className="container">
       <div className="card">
-        <h1>RCT Registration</h1>
+        <h1>Hand Hygiene Training Trail - CUHK</h1>
+        <p className="muted">Location: Pathology Teaching Laboratory 6 , 1/F, Lui Che Woo Clinical Sciences Building, Prince of Wales Hospital</p>
         <p className="muted">
           Select 3 unique session preferences (P1, P2, P3). The system auto-assigns the first
           available one.
         </p>
-        <div className="row">
-          <Link href="/lookup" className="link-button">
-            Check My Booking
-          </Link>
-        </div>
       </div>
 
       <div className="card">

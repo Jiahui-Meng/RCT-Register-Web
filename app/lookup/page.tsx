@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 
 type LookupResponse =
@@ -78,12 +77,8 @@ export default function LookupPage() {
     <main className="container">
       <div className="card">
         <h1>Check My Booking</h1>
+        <p className="muted">Location: Pathology Teaching Laboratory 6 , 1/F, Lui Che Woo Clinical Sciences Building, Prince of Wales Hospital</p>
         <p className="muted">Enter your student ID and email to view your assigned session.</p>
-        <div className="row">
-          <Link href="/register" className="link-button">
-            Go To Registration
-          </Link>
-        </div>
       </div>
 
       <form className="card" onSubmit={onSubmit}>

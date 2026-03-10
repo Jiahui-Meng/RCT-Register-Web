@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RCT Registration",
-  description: "Priority-based RCT registration system"
+  title: "Hand Hygiene Training Trail - CUHK",
+  description: "Location: Pathology Teaching Laboratory 6 , 1/F, Lui Che Woo Clinical Sciences Building, Prince of Wales Hospital"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

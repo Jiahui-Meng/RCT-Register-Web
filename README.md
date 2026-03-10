@@ -1,6 +1,6 @@
-# RCT Registration System (V1.1)
+# Hand Hygiene Training Trail - CUHK (V1.1)
 
-Priority-based student registration system built with Next.js + SQLite (local file).
+Location: Pathology Teaching Laboratory 6 , 1/F, Lui Che Woo Clinical Sciences Building, Prince of Wales Hospital
 
 ## Features
 

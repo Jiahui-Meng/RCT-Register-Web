@@ -4,10 +4,9 @@ export default function HomePage() {
   return (
     <main className="container">
       <div className="card">
-        <h1>RCT Registration System</h1>
+        <h1>Hand Hygiene Training Trail - CUHK</h1>
         <p className="muted">
-          Students can submit 3 ranked session preferences. The system assigns the first available
-          option automatically.
+          Location: Pathology Teaching Laboratory 6 , 1/F, Lui Che Woo Clinical Sciences Building, Prince of Wales Hospital
         </p>
         <div className="row">
           <Link href="/register" className="link-button">
